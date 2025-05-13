@@ -1,4 +1,4 @@
-name:                           Docker Image Release
+name: Docker Image Release
 
 on:
   push:
@@ -9,22 +9,45 @@ on:
 
 jobs:
   deploy-docker:
-    name:                       Build Release
-    runs-on:                    ubuntu-latest
+    name: Build Release
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.ref_name }}
     steps:
-      - name:                   Checkout sources
-        uses:                   actions/checkout@master
-      - name:                   Install toolchain
-        uses:                   actions-rs/toolchain@v1
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          toolchain:            stable
-          profile:              minimal
-          override:             true
-      - name:                   Deploy to docker hub
-        uses: elgohr/Publish-Docker-Github-Action@master
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          name: openethereum/openethereum
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          dockerfile: scripts/docker/alpine/Dockerfile
-          tag_names: true
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern=v{{version}},value=${{ env.VERSION }}
+            type=semver,pattern=v{{major}}.{{minor}},value=${{ env.VERSION }}
+            type=semver,pattern=v{{major}},value=${{ env.VERSION }}
+            type=raw,value=${{ env.VERSION }},enable=${{ github.event_name != 'schedule' }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ fromJson('["linux/amd64","linux/arm64/v8"]') }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          file: scripts/docker/alpine/Dockerfile
