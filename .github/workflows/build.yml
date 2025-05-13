@@ -9,7 +9,6 @@ on:
 # env:
 #   AWS_REGION: "us-east-1"
 #   AWS_S3_ARTIFACTS_BUCKET: "openethereum-releases"
-#   ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
   build:
@@ -61,7 +60,7 @@ jobs:
 
       - name: Upload Linux build
         uses: actions/upload-artifact@v4
-        if: matrix.platform == 'ubuntu-16.04'
+        if: matrix.platform == 'ubuntu-latest'
         with:
           name: linux-artifacts
           path: artifacts
@@ -76,7 +75,7 @@ jobs:
   zip-artifacts-creator:
     name: Create zip artifacts
     needs: build
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
     steps:
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
@@ -197,7 +196,7 @@ jobs:
   draft-release:
     name: Draft Release
     needs: zip-artifacts-creator
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
     steps:
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
